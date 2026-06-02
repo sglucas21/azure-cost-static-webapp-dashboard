@@ -51,7 +51,9 @@ function App() {
       });
   }, []);
 
-  const utilization = Math.round((data.currentSpend / data.budget) * 100);
+  const currentSpend = Number(data.currentSpend || 0);
+  const budget = Number(data.budget || 200);
+  const utilization = Math.round((currentSpend / budget) * 100);
 
   return (
     <main className="page">
@@ -76,7 +78,7 @@ function App() {
         />
         <MetricCard
           title="Monthly Budget"
-          value={`$${data.budget.toFixed(2)}`}
+          value={`$${budget.toFixed(2)}`}
           subtitle={`${utilization}% of budget used`}
           icon={<AlertTriangle size={26} />}
         />
@@ -97,6 +99,11 @@ function App() {
           <div className="progress-fill" style={{ width: `${Math.min(utilization, 100)}%` }} />
         </div>
       </section>
+
+      <div className="card">
+        <h2>API Debug</h2>
+        <pre>{JSON.stringify(data, null, 2)}</pre>
+      </div>
 
       <section className="grid charts">
         <div className="card">
