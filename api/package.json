@@ -1,0 +1,10 @@
+{
+  "name": "cost-dashboard-api",
+  "version": "1.0.0",
+  "description": "Azure Functions API for Azure Static Web Apps cost dashboard",
+  "main": "GetCostSummary/index.js",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {}
+}
