@@ -112,23 +112,34 @@ module.exports = async function (context, req) {
       },
       body: result
     };
-  } catch (error) {
+  } 
+  
+  catch (error) {
+
+  if (cachedResult && cachedAt) {
     context.res = {
       status: 200,
-      headers: {
-        "Content-Type": "application/json"
-      },
       body: {
-        currentSpend: 0,
-        budget: Number(process.env.MONTHLY_BUDGET || 200),
-        weeklyChangePercent: 0,
-        topDrivers: [],
-        weeklyTrend: [],
-        warning: "Azure Cost Management API unavailable",
-        details: error.response?.data?.error?.message || error.message
+        ...cachedResult,
+        cacheStatus: "Using cached data due to Azure throttling"
       }
     };
+    return;
   }
+
+  context.res = {
+    status: 200,
+    body: {
+      currentSpend: 0,
+      budget: Number(process.env.MONTHLY_BUDGET || 200),
+      topDrivers: [],
+      weeklyChangePercent: 0,
+      weeklyTrend: [],
+      warning: "Azure Cost Management API unavailable",
+      details: error.response?.data?.error?.message || error.message
+    }
+  };
+}
 };
 
 function friendlyCategory(serviceName) {
