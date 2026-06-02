@@ -1,4 +1,27 @@
+let cachedResult = null;
+let cachedAt = null;
+const CACHE_MINUTES = 30;
+
 module.exports = async function (context, req) {
+  const now = Date.now();
+
+  if (
+    cachedResult &&
+    cachedAt &&
+    now - cachedAt < CACHE_MINUTES * 60 * 1000
+  ) {
+    context.res = {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: {
+        ...cachedResult,
+        cacheStatus: "Returned cached cost data"
+      }
+    };
+    return;
+  }
   try {
     const { ClientSecretCredential } = require("@azure/identity");
     const axios = require("axios");
@@ -71,18 +94,23 @@ module.exports = async function (context, req) {
       0
     );
 
+    const result = {
+      currentSpend: Number(currentSpend.toFixed(2)),
+      budget: monthlyBudget,
+      weeklyChangePercent: 0,
+      topDrivers,
+      weeklyTrend: []
+    };
+
+    cachedResult = result;
+    cachedAt = Date.now();
+
     context.res = {
       status: 200,
       headers: {
         "Content-Type": "application/json"
       },
-      body: {
-        currentSpend: Number(currentSpend.toFixed(2)),
-        budget: monthlyBudget,
-        weeklyChangePercent: 0,
-        topDrivers,
-        weeklyTrend: []
-      }
+      body: result
     };
   } catch (error) {
     context.res = {
