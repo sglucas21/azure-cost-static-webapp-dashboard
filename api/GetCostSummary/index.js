@@ -23,7 +23,9 @@ module.exports = async function (context, req) {
       `https://management.azure.com/subscriptions/${subscriptionId}` +
       `/providers/Microsoft.CostManagement/query?api-version=2025-03-01`;
 
-    async function queryCost(body) {
+async function queryCost(body, retries = 5) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
       const response = await axios.post(endpoint, body, {
         headers: {
           Authorization: `Bearer ${token.token}`,
@@ -32,7 +34,28 @@ module.exports = async function (context, req) {
       });
 
       return response.data.properties.rows || [];
+    } catch (error) {
+      if (error.response && error.response.status === 429) {
+        const retryAfter =
+          error.response.headers["retry-after"] ||
+          error.response.headers["x-ms-ratelimit-microsoft.costmanagement-entity-retry-after"] ||
+          10;
+
+        context.log(`429 received. Waiting ${retryAfter} seconds before retrying...`);
+
+        await new Promise(resolve =>
+          setTimeout(resolve, Number(retryAfter) * 1000)
+        );
+
+        continue;
+      }
+
+      throw error;
     }
+  }
+
+  throw new Error("Cost Management API throttled after multiple retries.");
+}
 
     // 1. Month-to-date total spend
     const totalRows = await queryCost({
