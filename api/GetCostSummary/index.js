@@ -32,7 +32,13 @@ module.exports = async function (context, req) {
               name: "Cost",
               function: "Sum"
             }
-          }
+          },
+          grouping: [
+            {
+              type: "Dimension",
+              name: "ServiceName"
+            }
+          ]
         }
       },
       {
@@ -44,7 +50,26 @@ module.exports = async function (context, req) {
     );
 
     const rows = response.data.properties.rows || [];
-    const currentSpend = rows.length ? Number(rows[0][0]) : 0;
+
+    const topDrivers = rows
+      .map((row) => {
+        const cost = Number(row[0]);
+        const serviceName = row[1] || "Unknown Service";
+
+        return {
+          name: serviceName,
+          category: friendlyCategory(serviceName),
+          cost: Number(cost.toFixed(2))
+        };
+      })
+      .filter((item) => item.cost > 0)
+      .sort((a, b) => b.cost - a.cost)
+      .slice(0, 5);
+
+    const currentSpend = topDrivers.reduce(
+      (sum, item) => sum + item.cost,
+      0
+    );
 
     context.res = {
       status: 200,
@@ -55,7 +80,7 @@ module.exports = async function (context, req) {
         currentSpend: Number(currentSpend.toFixed(2)),
         budget: monthlyBudget,
         weeklyChangePercent: 0,
-        topDrivers: [],
+        topDrivers,
         weeklyTrend: []
       }
     };
@@ -77,3 +102,18 @@ module.exports = async function (context, req) {
     };
   }
 };
+
+function friendlyCategory(serviceName) {
+  const name = serviceName.toLowerCase();
+
+  if (name.includes("virtual machine")) return "Virtual Machines";
+  if (name.includes("storage")) return "Storage";
+  if (name.includes("network")) return "Networking";
+  if (name.includes("static web")) return "Static Web Apps";
+  if (name.includes("functions")) return "Functions";
+  if (name.includes("app service")) return "App Services";
+  if (name.includes("monitor")) return "Monitoring";
+  if (name.includes("log analytics")) return "Log Analytics";
+
+  return "Other";
+}
