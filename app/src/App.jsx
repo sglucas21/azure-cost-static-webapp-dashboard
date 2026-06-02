@@ -70,7 +70,7 @@ function App() {
       <section className="grid metrics">
         <MetricCard
           title="Current Spend"
-          value={`$${data.currentSpend.toFixed(2)}`}
+          value={`$${Number(data.currentSpend).toFixed(2)}`}
           subtitle="Month-to-date Azure spend"
           icon={<DollarSign size={26} />}
         />
