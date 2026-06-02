@@ -1,13 +1,49 @@
 module.exports = async function (context, req) {
   try {
-    let identityLoaded = false;
-    let axiosLoaded = false;
-
     const { ClientSecretCredential } = require("@azure/identity");
-    identityLoaded = true;
-
     const axios = require("axios");
-    axiosLoaded = true;
+
+    const tenantId = process.env.AZURE_TENANT_ID;
+    const clientId = process.env.AZURE_CLIENT_ID;
+    const clientSecret = process.env.AZURE_CLIENT_SECRET;
+    const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID;
+
+    const credential = new ClientSecretCredential(
+      tenantId,
+      clientId,
+      clientSecret
+    );
+
+    const token = await credential.getToken(
+      "https://management.azure.com/.default"
+    );
+
+    const endpoint =
+      `https://management.azure.com/subscriptions/${subscriptionId}` +
+      `/providers/Microsoft.CostManagement/query?api-version=2023-03-01`;
+
+    const response = await axios.post(
+      endpoint,
+      {
+        type: "ActualCost",
+        timeframe: "MonthToDate",
+        dataset: {
+          granularity: "None",
+          aggregation: {
+            totalCost: {
+              name: "Cost",
+              function: "Sum"
+            }
+          }
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token.token}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
     context.res = {
       status: 200,
@@ -15,16 +51,9 @@ module.exports = async function (context, req) {
         "Content-Type": "application/json"
       },
       body: {
-        message: "Function loaded successfully",
-        identityLoaded,
-        axiosLoaded,
-        envCheck: {
-          AZURE_TENANT_ID: !!process.env.AZURE_TENANT_ID,
-          AZURE_CLIENT_ID: !!process.env.AZURE_CLIENT_ID,
-          AZURE_CLIENT_SECRET: !!process.env.AZURE_CLIENT_SECRET,
-          AZURE_SUBSCRIPTION_ID: !!process.env.AZURE_SUBSCRIPTION_ID,
-          MONTHLY_BUDGET: !!process.env.MONTHLY_BUDGET
-        }
+        message: "Cost Management query succeeded",
+        rows: response.data.properties.rows,
+        columns: response.data.properties.columns
       }
     };
   } catch (error) {
@@ -34,8 +63,10 @@ module.exports = async function (context, req) {
         "Content-Type": "application/json"
       },
       body: {
-        error: "Diagnostic test failed",
-        details: error.message
+        error: "Cost Management query failed",
+        message: error.message,
+        status: error.response?.status || null,
+        data: error.response?.data || null
       }
     };
   }
