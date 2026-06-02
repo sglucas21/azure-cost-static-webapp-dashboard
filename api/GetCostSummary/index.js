@@ -1,27 +1,66 @@
-module.exports = async function (context, req) {
-  const costSummary = {
-    currentSpend: 145.22,
-    budget: 200,
-    weeklyChangePercent: 12,
-    topDrivers: [
-      { name: "Virtual Machines", category: "Servers", cost: 72.35 },
-      { name: "Storage Accounts", category: "Storage", cost: 28.14 },
-      { name: "Virtual Network", category: "Networking", cost: 19.62 },
-      { name: "Log Analytics", category: "Monitoring", cost: 15.5 }
-    ],
-    weeklyTrend: [
-      { week: "Week 1", cost: 84 },
-      { week: "Week 2", cost: 97 },
-      { week: "Week 3", cost: 129 },
-      { week: "Week 4", cost: 145 }
-    ]
-  };
+const { ClientSecretCredential } = require("@azure/identity");
+const axios = require("axios");
 
-  context.res = {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: costSummary
-  };
+module.exports = async function (context, req) {
+
+    const tenantId = process.env.AZURE_TENANT_ID;
+    const clientId = process.env.AZURE_CLIENT_ID;
+    const clientSecret = process.env.AZURE_CLIENT_SECRET;
+    const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID;
+
+    const credential = new ClientSecretCredential(
+        tenantId,
+        clientId,
+        clientSecret
+    );
+
+    const token = await credential.getToken(
+        "https://management.azure.com/.default"
+    );
+
+    const endpoint =
+        `https://management.azure.com/subscriptions/${subscriptionId}` +
+        `/providers/Microsoft.CostManagement/query?api-version=2023-03-01`;
+
+    const response = await axios.post(
+        endpoint,
+        {
+            type: "ActualCost",
+            timeframe: "MonthToDate",
+            dataset: {
+                granularity: "Daily",
+                aggregation: {
+                    totalCost: {
+                        name: "Cost",
+                        function: "Sum"
+                    }
+                }
+            }
+        },
+        {
+            headers: {
+                Authorization: `Bearer ${token.token}`,
+                "Content-Type": "application/json"
+            }
+        }
+    );
+
+    const rows = response.data.properties.rows;
+
+    let totalCost = 0;
+
+    rows.forEach(row => {
+        totalCost += row[0];
+    });
+
+    context.res = {
+        status: 200,
+        body: {
+            currentSpend: totalCost,
+            budget: 200,
+            weeklyChangePercent: 0,
+            topDrivers: [],
+            weeklyTrend: []
+        }
+    };
 };
