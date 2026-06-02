@@ -44,7 +44,7 @@ function App() {
       .then((response) => response.json())
       .then((apiData) => {
         setData(apiData);
-        setStatus("Live API response loaded");
+        setStatus("Live");
       })
       .catch(() => {
         setStatus("Using fallback sample data");
@@ -59,7 +59,7 @@ function App() {
     <main className="page">
       <section className="hero">
         <div>
-          <p className="eyebrow">Azure FinOps Portfolio Project</p>
+          <p className="eyebrow">Derby City FinOps Portfolio Project</p>
           <h1>Azure Cost Visibility Dashboard</h1>
           <p className="hero-text">
             Business-friendly cloud cost visibility for Azure spending, budget utilization,
