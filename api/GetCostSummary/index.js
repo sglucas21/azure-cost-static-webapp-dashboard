@@ -3,20 +3,18 @@ module.exports = async function (context, req) {
     const { ClientSecretCredential } = require("@azure/identity");
     const axios = require("axios");
 
-    const tenantId = process.env.AZURE_TENANT_ID;
-    const clientId = process.env.AZURE_CLIENT_ID;
-    const clientSecret = process.env.AZURE_CLIENT_SECRET;
-    const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID;
-
     const credential = new ClientSecretCredential(
-      tenantId,
-      clientId,
-      clientSecret
+      process.env.AZURE_TENANT_ID,
+      process.env.AZURE_CLIENT_ID,
+      process.env.AZURE_CLIENT_SECRET
     );
 
     const token = await credential.getToken(
       "https://management.azure.com/.default"
     );
+
+    const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID;
+    const monthlyBudget = Number(process.env.MONTHLY_BUDGET || 200);
 
     const endpoint =
       `https://management.azure.com/subscriptions/${subscriptionId}` +
@@ -45,28 +43,36 @@ module.exports = async function (context, req) {
       }
     );
 
+    const rows = response.data.properties.rows || [];
+    const currentSpend = rows.length ? Number(rows[0][0]) : 0;
+
     context.res = {
       status: 200,
       headers: {
         "Content-Type": "application/json"
       },
       body: {
-        message: "Cost Management query succeeded",
-        rows: response.data.properties.rows,
-        columns: response.data.properties.columns
+        currentSpend: Number(currentSpend.toFixed(2)),
+        budget: monthlyBudget,
+        weeklyChangePercent: 0,
+        topDrivers: [],
+        weeklyTrend: []
       }
     };
   } catch (error) {
     context.res = {
-      status: 500,
+      status: 200,
       headers: {
         "Content-Type": "application/json"
       },
       body: {
-        error: "Cost Management query failed",
-        message: error.message,
-        status: error.response?.status || null,
-        data: error.response?.data || null
+        currentSpend: 0,
+        budget: Number(process.env.MONTHLY_BUDGET || 200),
+        weeklyChangePercent: 0,
+        topDrivers: [],
+        weeklyTrend: [],
+        warning: "Azure Cost Management API unavailable",
+        details: error.response?.data?.error?.message || error.message
       }
     };
   }
