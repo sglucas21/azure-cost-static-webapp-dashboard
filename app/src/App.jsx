@@ -109,7 +109,7 @@ function App() {
         <div className="card">
           <h2>Weekly Cost Trend</h2>
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={data.weeklyTrend}>
+            <LineChart width={500} height={250} data={data.weeklyTrend}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="week" />
               <YAxis />
