@@ -108,6 +108,9 @@ function App() {
       <section className="grid charts">
         <div className="card">
           <h2>Weekly Cost Trend</h2>
+          <pre>
+            {JSON.stringify(data.weeklyTrend, null, 2)}
+          </pre>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart width={500} height={250} data={data.weeklyTrend}>
               <CartesianGrid strokeDasharray="3 3" />
