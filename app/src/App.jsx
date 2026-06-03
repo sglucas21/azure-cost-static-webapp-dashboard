@@ -100,11 +100,6 @@ function App() {
         </div>
       </section>
 
-      <div className="card">
-        <h2>API Debug</h2>
-        <pre>{JSON.stringify(data, null, 2)}</pre>
-      </div>
-
       <section className="grid charts">
         <div className="card">
           <h2>Weekly Cost Trend</h2>
