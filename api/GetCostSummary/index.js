@@ -171,7 +171,10 @@ async function getAzureCostData() {
     budget: monthlyBudget,
     weeklyChangePercent: 0,
     topDrivers,
-    weeklyTrend: []
+    dailyTrend: rows.map((row) => ({
+      date: String(row[2]),
+      cost: Number(Number(row[0]).toFixed(2))
+    }))
   };
 }
 
