@@ -124,7 +124,7 @@ async function getAzureCostData() {
       type: "ActualCost",
       timeframe: "MonthToDate",
       dataset: {
-        granularity: "None",
+        granularity: "Daily",
         aggregation: {
           totalCost: {
             name: "Cost",

@@ -19,7 +19,9 @@ const fallbackData = {
     { week: "Week 2", cost: 97 },
     { week: "Week 3", cost: 129 },
     { week: "Week 4", cost: 145 }
-  ]
+  ],
+
+  cachedAt: new Date().toISOString()
 };
 
 function MetricCard({ title, value, subtitle, icon }) {
@@ -61,6 +63,9 @@ function App() {
         <div>
           <p className="eyebrow">Derby City FinOps Portfolio Project</p>
           <h1>Azure Cost Visibility Dashboard</h1>
+          <p className="cache-time">
+            Last Updated: {new Date(data.cachedAt).toLocaleString()}
+          </p>
           <p className="hero-text">
             Business-friendly cloud cost visibility for Azure spending, budget utilization,
             weekly trends, and top cost drivers.
