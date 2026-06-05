@@ -110,7 +110,7 @@ function App() {
           <h2>Daily Cost Trend</h2>
 
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={data.dailyTrend}>
+            <LineChart data={data?.dailyTrend || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />

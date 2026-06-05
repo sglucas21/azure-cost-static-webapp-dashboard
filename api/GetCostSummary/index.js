@@ -149,110 +149,118 @@ async function getAzureCostData() {
 
   const rows = response.data.properties.rows || [];
 
-  const topDrivers = rows
-    .map((row) => {
-      const cost = Number(row[0]);
-      const serviceName = row[1] || "Unknown Service";
 
-      return {
-        name: serviceName,
-        category: friendlyCategory(serviceName),
-        cost: Number(cost.toFixed(2))
-      };
-    })
+  const dailyTrendMap = {};
+  const topDriverMap = {};
+
+  rows.forEach((row) => {
+    const cost = Number(row[0]) || 0;
+    const rawDate = String(row[1]);
+    const serviceName = String(row[2] || "Unknown Service");
+
+    dailyTrendMap[rawDate] = (dailyTrendMap[rawDate] || 0) + cost;
+    topDriverMap[serviceName] = (topDriverMap[serviceName] || 0) + cost;
+  });
+
+  const dailyTrend = Object.entries(dailyTrendMap).map(([date, cost]) => ({
+    date,
+    cost: Number(cost.toFixed(2))
+  }));
+
+  const topDrivers = Object.entries(topDriverMap)
+    .map(([serviceName, cost]) => ({
+      name: serviceName,
+      category: friendlyCategory(serviceName),
+      cost: Number(cost.toFixed(2))
+    }))
     .filter((item) => item.cost > 0)
     .sort((a, b) => b.cost - a.cost)
     .slice(0, 5);
 
-  const currentSpend = topDrivers.reduce((sum, item) => sum + item.cost, 0);
-  console.log("Rows from Azure:", rows);
-  console.log("Top Drivers:", topDrivers);
-  console.log("Current Spend:", currentSpend);
+  const currentSpend = rows.reduce((sum, row) => {
+    return sum + (Number(row[0]) || 0);
+  }, 0);
 
   return {
     currentSpend: Number(currentSpend.toFixed(2)),
     budget: monthlyBudget,
     weeklyChangePercent: 0,
     topDrivers,
-    dailyTrend: rows.map((row) => ({
-      date: String(row[2]),
-      cost: Number(Number(row[0]).toFixed(2))
-    }))
+    dailyTrend
   };
-}
 
-async function readCostCache() {
-  try {
-    const containerClient = getContainerClient();
-    const blockBlobClient = containerClient.getBlockBlobClient(BLOB_NAME);
+  async function readCostCache() {
+    try {
+      const containerClient = getContainerClient();
+      const blockBlobClient = containerClient.getBlockBlobClient(BLOB_NAME);
 
-    const exists = await blockBlobClient.exists();
+      const exists = await blockBlobClient.exists();
 
-    if (!exists) {
+      if (!exists) {
+        return null;
+      }
+
+      const downloadResponse = await blockBlobClient.download();
+      const downloaded = await streamToString(downloadResponse.readableStreamBody);
+
+      return JSON.parse(downloaded);
+    } catch {
       return null;
     }
-
-    const downloadResponse = await blockBlobClient.download();
-    const downloaded = await streamToString(downloadResponse.readableStreamBody);
-
-    return JSON.parse(downloaded);
-  } catch {
-    return null;
   }
-}
 
-async function writeCostCache(data) {
-  const containerClient = getContainerClient();
+  async function writeCostCache(data) {
+    const containerClient = getContainerClient();
 
-  await containerClient.createIfNotExists();
+    await containerClient.createIfNotExists();
 
-  const blockBlobClient = containerClient.getBlockBlobClient(BLOB_NAME);
-  const json = JSON.stringify(data, null, 2);
+    const blockBlobClient = containerClient.getBlockBlobClient(BLOB_NAME);
+    const json = JSON.stringify(data, null, 2);
 
-  await blockBlobClient.upload(json, Buffer.byteLength(json), {
-    blobHTTPHeaders: {
-      blobContentType: "application/json"
-    }
-  });
-}
-
-function getContainerClient() {
-  const connectionString = process.env.COST_CACHE_CONNECTION_STRING;
-  const containerName = process.env.COST_CACHE_CONTAINER || "cost-cache";
-
-  const blobServiceClient =
-    BlobServiceClient.fromConnectionString(connectionString);
-
-  return blobServiceClient.getContainerClient(containerName);
-}
-
-async function streamToString(readableStream) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-
-    readableStream.on("data", (data) => {
-      chunks.push(data.toString());
+    await blockBlobClient.upload(json, Buffer.byteLength(json), {
+      blobHTTPHeaders: {
+        blobContentType: "application/json"
+      }
     });
+  }
 
-    readableStream.on("end", () => {
-      resolve(chunks.join(""));
+  function getContainerClient() {
+    const connectionString = process.env.COST_CACHE_CONNECTION_STRING;
+    const containerName = process.env.COST_CACHE_CONTAINER || "cost-cache";
+
+    const blobServiceClient =
+      BlobServiceClient.fromConnectionString(connectionString);
+
+    return blobServiceClient.getContainerClient(containerName);
+  }
+
+  async function streamToString(readableStream) {
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+
+      readableStream.on("data", (data) => {
+        chunks.push(data.toString());
+      });
+
+      readableStream.on("end", () => {
+        resolve(chunks.join(""));
+      });
+
+      readableStream.on("error", reject);
     });
+  }
 
-    readableStream.on("error", reject);
-  });
-}
+  function friendlyCategory(serviceName) {
+    const name = serviceName.toLowerCase();
 
-function friendlyCategory(serviceName) {
-  const name = serviceName.toLowerCase();
+    if (name.includes("virtual machine")) return "Virtual Machines";
+    if (name.includes("storage")) return "Storage";
+    if (name.includes("network")) return "Networking";
+    if (name.includes("static web")) return "Static Web Apps";
+    if (name.includes("functions")) return "Functions";
+    if (name.includes("app service")) return "App Services";
+    if (name.includes("monitor")) return "Monitoring";
+    if (name.includes("log analytics")) return "Log Analytics";
 
-  if (name.includes("virtual machine")) return "Virtual Machines";
-  if (name.includes("storage")) return "Storage";
-  if (name.includes("network")) return "Networking";
-  if (name.includes("static web")) return "Static Web Apps";
-  if (name.includes("functions")) return "Functions";
-  if (name.includes("app service")) return "App Services";
-  if (name.includes("monitor")) return "Monitoring";
-  if (name.includes("log analytics")) return "Log Analytics";
-
-  return "Other";
-}
+    return "Other";
+  }
