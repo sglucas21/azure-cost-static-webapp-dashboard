@@ -155,7 +155,7 @@ async function getAzureCostData() {
 
   rows.forEach((row) => {
     const cost = Number(row[0]) || 0;
-    const rawDate = String(row[1]);
+    const rawDate = String(row[1] || "Unknown Date");
     const serviceName = String(row[2] || "Unknown Service");
 
     dailyTrendMap[rawDate] = (dailyTrendMap[rawDate] || 0) + cost;
@@ -188,7 +188,7 @@ async function getAzureCostData() {
     topDrivers,
     dailyTrend
   };
-
+}
   async function readCostCache() {
     try {
       const containerClient = getContainerClient();
