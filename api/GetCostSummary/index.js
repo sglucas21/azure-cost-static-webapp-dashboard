@@ -2,7 +2,7 @@ const { BlobServiceClient } = require("@azure/storage-blob");
 
 let memoryCache = null;
 let memoryCacheAt = null;
-const CACHE_MINUTES = 60;
+const CACHE_MINUTES = 1;
 const BLOB_NAME = "latest-cost-summary.json";
 
 module.exports = async function (context, req) {
