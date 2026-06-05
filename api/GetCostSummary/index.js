@@ -165,6 +165,9 @@ async function getAzureCostData() {
     .slice(0, 5);
 
   const currentSpend = topDrivers.reduce((sum, item) => sum + item.cost, 0);
+  console.log("Rows from Azure:", rows);
+  console.log("Top Drivers:", topDrivers);
+  console.log("Current Spend:", currentSpend);
 
   return {
     currentSpend: Number(currentSpend.toFixed(2)),
